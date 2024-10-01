@@ -1,0 +1,41 @@
+{
+    "name": "bk-food-be",
+    "version": "1.0.0",
+    "description": "",
+    "main": "server.js",
+    "type": "module",
+    "imports": {
+        "#root/*.js": "./*.js",
+        "#routes/*.js": "./Routes/*.js",
+        "#controllers/*.js": "./Controllers/*.js",
+        "#middlewares/*.js": "./Middlewares/*.js",
+        "#config/*.js": "./config/*.js",
+        "#models/*.js": "./Models/*.js",
+        "#services/*.js": "./Services/*.js",
+        "#utils/*.js": "./Utils/*.js"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "nodemon server.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "bcrypt": "^5.1.1",
+        "body-parser": "^1.20.2",
+        "cookie-parser": "^1.4.6",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "express-fileupload": "^1.5.0",
+        "jsonwebtoken": "^9.0.2",
+        "nodemon": "^3.1.3",
+        "pg": "^8.12.0",
+        "pg-hstore": "^2.3.4",
+        "sequelize": "^6.37.3",
+        "sequelize-auto": "^0.8.8"
+    },
+    "devDependencies": {
+        "sequelize-cli": "^6.6.2"
+    }
+}
