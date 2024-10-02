@@ -29,9 +29,9 @@ async function decodeJWT(req, res, next) {
 
 async function queryUser(req, res, next) {
     try {
-        const decodes = res.locals.user;
-        res.locals.user = await models.User.findOne({ where: { userId: decodes.userId } });
-        if (!res.locals.user.active) {
+        const decodes = req.user;
+        req.user = await models.User.findOne({ where: { userId: decodes.userId } });
+        if (!req.user.active) {
             return res.status(403).json({ 'message': 'Unauthorized user' });
         }
         next();
