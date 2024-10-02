@@ -19,7 +19,7 @@ async function decodeJWT(req, res, next) {
             console.error(req.method, req.url, error);
             return res.status(401).json(error);
         }
-        res.locals.user = decodes;
+        req.user = decodes;
         next();
     } catch (error) {
         console.error(req.method, req.url, error);

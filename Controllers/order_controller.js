@@ -3,7 +3,7 @@ import { checkInteger } from '#services/check_integer.js';
 import { roles, statuses } from '#config/role_config.js';
 
 async function createOrder(req, res) {
-    let user = res.locals.user;
+    let user = req.user;
 
     try {
         const { tableId, orderList } = req.body;
@@ -25,7 +25,7 @@ async function createOrder(req, res) {
 
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot create order' });
+        return res.status(500).json({ 'message': 'Server cannot create order' });
     }
 }
 
@@ -56,7 +56,7 @@ async function getOrderByTableId(req, res) {
                 orderId: order_extract[0].orderid
             }
         });
-        res.status(200).json({
+        return res.status(200).json({
             'orderId': order_extract[0].orderid,
             'statusCode': order_extract[0].statuscode,
             'ordertime': order_extract[0].ordertime,
@@ -65,7 +65,7 @@ async function getOrderByTableId(req, res) {
         });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot get order' });
+        return res.status(500).json({ 'message': 'Server cannot get order' });
     }
 }
 
@@ -91,7 +91,7 @@ async function getAllOrders(req, res) {
             });
 
         });
-        const total = (await sequelize.query('SELECT COUNT(*) as count FROM "Order" WHERE "statusCode" = :sc', {
+        const total = (await sequelize.query('SELECT COUNT(*) as count FROM "Order" WHERE "statusCode" = :sc OR :sc = -1', {
             replacements: {
                 sc: statusCode,
             },
@@ -106,19 +106,19 @@ async function getAllOrders(req, res) {
 
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot get order' });
+        return res.status(500).json({ 'message': 'Server cannot get order' });
     }
 }
 
 async function updateOrder(req, res) {
     try {
         const { body, params } = req;
-        const user = res.locals.user;
+        const user = req.user;
         const adminOp = (user.roleCode == roles.ADMIN) && (body.statusCode == statuses.FINISHED);
-        const staffOp = (user.roleCode == roles.STAFF) && (body.statusCode == statuses.CONFIRMED);
-        if (!adminOp || !staffOp) {
+        const staffOp = (user.roleCode == roles.STAFF) && (body.statusCode == statuses.DELIVERED);
+        if (!adminOp && !staffOp) {
             return res.status(405).json({
-                'message': 'Access denied'
+                message: 'Access denied'
             });
         }
         const order = await models.Order.findOne({
@@ -127,18 +127,18 @@ async function updateOrder(req, res) {
             }
         });
         if (!order) {
-            res.status(404).json({
+            return res.status(404).json({
                 'message': 'Invalid order id'
             });
         }
         //updated status must be greater than current status by 1
         if ((body.statusCode - order.statusCode) != 1) {
-            res.status(400).json({
+            return res.status(400).json({
                 'message': 'Invalid status code'
             });
         }
         let valueUpdate = {};
-        if (body.statusCodl == statuses.CONFIRMED) {
+        if (body.statusCode == statuses.FINISHED) {
             valueUpdate = {
                 statusCode: body.statusCode,
                 finishedBy: user.userId,
@@ -155,13 +155,13 @@ async function updateOrder(req, res) {
 
         await models.Order.update(valueUpdate, { where: { orderId: params.id } });
 
-        res.status(201).json({
+        return res.status(201).json({
             'message': 'Successful',
             tableId: order.tableId
         });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json(error);
+        return res.status(500).json(error);
     }
 }
 

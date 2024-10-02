@@ -4,11 +4,11 @@ import { roles } from '#config/role_config.js';
 import { checkInteger } from '#services/check_integer.js';
 import fs from 'fs';
 
-// const __dirname = ''
+// const __dirname = ""
 async function createFood(req, res) {
 
     // Authorize the user (Only admin can createFood)
-    let user = res.locals.user;
+    let user = req.user;
 
     if (user.roleCode != roles.ADMIN) return res.status(403).json({ 'message': 'Unauthorized operation' });
 
@@ -19,6 +19,7 @@ async function createFood(req, res) {
         if (!image) return res.status(400).json({ 'message': 'You need to upload image' });
         // If doesn't have image mime type prevent from uploading
         if (!/^image/.test(image.mimetype)) return res.status(400).json({ 'message': 'The file does not have image mime type' });
+
         // Creating a new food
         const newFood = await models.Food.create({
             categoryId: categoryId,
@@ -28,10 +29,10 @@ async function createFood(req, res) {
             active: true
         });
 
-        newFood['imgURL'] = `/food/img/${newFood.foodId}`;
+        newFood["imgURL"] = `/food/img/${newFood.foodId}`;
         await newFood.save();
         // Move the uploaded image to our upload folder
-        image.mv(__dirname + '/upload/' + newFood.foodId + '.png');
+        image.mv(__dirname + '/upload/' + newFood.foodId + ".png");
         return res.status(200).json(newFood);
     } catch (error) {
         console.error(req.method, req.url, error);
@@ -41,7 +42,7 @@ async function createFood(req, res) {
 
 async function deleteFood(req, res) {
     try {
-        let user = res.locals.user;
+        let user = req.user;
 
         if (user.roleCode != roles.ADMIN) return res.status(403).json({ 'message': 'Unauthorized operation' });
         const { id } = req.params;
@@ -63,17 +64,22 @@ async function deleteFood(req, res) {
         });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot delete food' });
+        return res.status(500).json({ 'message': 'Server cannot delete food' });
     }
 }
 
 async function getAllFood(req, res) {
     try {
-        const foods = await models.Food.findAll();
-        res.status(200).json(foods);
+        const foods = await models.Food.findAll({
+            include: {
+                model: models.Category,
+                as: 'category',
+            }
+        });
+        return res.status(200).json(foods);
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': `Server cannot fetch foods` });
+        return res.status(500).json({ message: `Server cannot fetch foods: ${err}` });
     }
 }
 
@@ -111,14 +117,14 @@ async function getFood(req, res) {
         const { count, rows } = await models.Food.findAndCountAll({
             include: {
                 model: models.Category,
-                as: 'c',
-                where
+                as: 'category',
             },
+            where,
             offset,
             limit: parseInt(limit),
         });
         const totalPages = Math.ceil(count / limit);
-        res.status(200).json({
+        return res.status(200).json({
             foods: rows,
             currentPage: parseInt(page),
             totalPages,
@@ -126,7 +132,7 @@ async function getFood(req, res) {
         });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': `Server cannot fetch foods` });
+        return res.status(500).json({ message: `Server cannot fetch foods: ${err}` });
     }
 }
 
@@ -134,10 +140,10 @@ async function getFoodById(req, res) {
     const id = req.params.id;
     try {
         const extractedFood = await models.Food.findOne({ where: { foodId: id } });
-        res.status(200).json(extractedFood);
+        return res.status(200).json(extractedFood);
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot get food by id' });
+        return res.status(500).json({ 'message': 'Server cannot get food by id' });
     }
 }
 
@@ -150,37 +156,37 @@ async function getFoodImageById(req, res) {
             res.setHeader('Content-Type', 'image/png');
             const imageData = fs.readFileSync(`${__dirname}/upload/${id}.png`);
             res.setHeader('Content-Type', 'image/png');
-            res.status(200).sendFile(`${__dirname}/upload/${id}.png`);
+            return res.status(200).sendFile(`${__dirname}/upload/${id}.png`);
         }
-    } catch (error) {
-        console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot get food by id' });
+    } catch (err) {
+        console.error(req.method, req.url, err);
+        return res.status(500).json({ 'message': 'Server cannot get food by id' });
     }
 }
 
 async function updateFood(req, res) {
     try {
         const { body, files, params } = req;
-        let user = res.locals.user;
+        let user = req.user;
 
         if (user.roleCode != roles.ADMIN) return res.status(403).json({ 'message': 'Unauthorized operation' });
 
         const food = await models.Food.findOne({ where: { foodId: params.id } });
         if (!food) {
             return res.status(404).json({
-                'message': 'Not found food'
+                message: "Not found food"
             });
         }
-        if (body.quantity) if (body.quantity < 0) return res.status(400).json({ 'message': 'quantity cannot be negative' });
-        if (body.price) if (body.price < 0) return res.status(400).json({ 'message': 'price cannot be negative' });
+        if (body.quantity) if (body.quantity < 0) return res.status(400).json({ message: 'quantity cannot be negative' });
+        if (body.price) if (body.price < 0) return res.status(400).json({ message: 'price cannot be negative' });
         await models.Food.update(body, { where: { foodId: params.id } });
         food.imgURL = `/food/img/${food.foodId}`;
-        if (files) files.image.mv(__dirname + '/upload/' + food.foodId + '.png');
+        if (files) files.image.mv(__dirname + '/upload/' + food.foodId + ".png");
 
-        return res.status(200).json({ 'message': 'Update successfully' });
+        return res.status(200).json({ message: 'Update successfully' });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json(error);
+        return res.status(500).json(error);
     }
 }
 

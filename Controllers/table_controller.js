@@ -14,7 +14,7 @@ async function getStatus(req, res) {
         }
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json(error);
+        return res.status(500).json(error);
     }
 }
 async function getAllStatus(req, res) {
@@ -34,7 +34,7 @@ async function getAllStatus(req, res) {
         }
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json(error);
+        return res.status(500).json(error);
     }
 }
 

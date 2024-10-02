@@ -6,7 +6,7 @@ import JWTconfig from '#config/jwt_config.js';
 
 async function login(req, res) {
     try {
-        let extractedUser = res.locals.user;
+        let extractedUser = req.user;
         // If not provided with access token, check username and password
         if (!extractedUser) {
             const { userName, pwd } = req.body;
@@ -36,7 +36,7 @@ async function login(req, res) {
         });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json({ 'message': 'Server cannot login' });
+        return res.status(500).json({ 'message': 'Server cannot login' });
     }
 }
 
@@ -44,16 +44,16 @@ async function logout(req, res) {
     try {
         res.clearCookie('accessToken');
         res.clearCookie('refreshToken');
-        res.status(200).json({ 'message': 'Logged out successfully' });
+        return res.status(200).json({ 'message': 'Logged out successfully' });
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json(error);
+        return res.status(500).json(error);
     }
 }
 
 async function refreshToken(req, res) {
     try {
-        const extractedUser = res.locals.user;
+        const extractedUser = req.user;
         const refreshToken = req.body.refreshToken;
         if (!refreshToken) {
             return res.status(404).json({
@@ -73,14 +73,14 @@ async function refreshToken(req, res) {
         );
 
         res.cookie('accessToken', newToken, { httpOnly: true, maxAge: JWTconfig.tokenLife });
-        res.status(200).json({
+        return res.status(200).json({
             'message': 'successful',
             accessToken: newToken,
         });
 
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(401).json(error);
+        return res.status(401).json(error);
     }
 }
 
@@ -94,7 +94,7 @@ async function addNewUser(req, res) {
             pwd: hashCode,
             roleCode: 0,
         });
-        res.status(200).json({
+        return res.status(200).json({
             userId: newUser.userId,
             userName: newUser.userName,
             name: newUser.name,
@@ -103,7 +103,7 @@ async function addNewUser(req, res) {
 
     } catch (error) {
         console.error(req.method, req.url, error);
-        res.status(500).json(error);
+        return res.status(500).json(error);
     }
 }
 
