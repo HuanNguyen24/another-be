@@ -40,6 +40,16 @@ export default class User extends Model {
       type: DataTypes.DATE,
       allowNull: true,
       defaultValue: Sequelize.Sequelize.fn('now')
+    },
+    email: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: ""
+    },
+    phoneNumber: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: ""
     }
   }, {
     tableName: 'User',
