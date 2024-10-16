@@ -77,8 +77,8 @@ async function deleteFood(req, res) {
 async function getAllFood(req, res) {
     try {
         const foods = await models.Food.findAll({
+            where: { active: true },
             include: {
-                where: { active: true },
                 model: models.Category,
                 as: 'category',
             }
