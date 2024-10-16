@@ -11,11 +11,10 @@ const router = Router();
 
 router.post('/register', addNewUser);
 router.post('/logout', logout);
-router.post('/login', login);
 router.post('/access-token',decodeJWT, refreshToken);
 
 router.use(decodeJWT);
 
-
+router.post('/login', login);
 
 export default router;

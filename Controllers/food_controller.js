@@ -13,13 +13,16 @@ async function createFood(req, res) {
     if (user.roleCode != roles.ADMIN) return res.status(403).json({ 'message': 'Unauthorized operation' });
 
     const { categoryId, name, quantity, price } = req.body;
+    if (!req.files) return res.status(400).json({ 'message': 'You need to upload image' });
     const { image } = req.files;
 
     try {
         if (!image) return res.status(400).json({ 'message': 'You need to upload image' });
         // If doesn't have image mime type prevent from uploading
-        if (!/^image/.test(image.mimetype)) return res.status(400).json({ 'message': 'The file does not have image mime type' });
-
+        if (!/^image/.test(image.mimetype)) return res.status(400).json({ 'message': 'The file does not have image mime type or you upload more than one photo' });
+        // Upload the image with a temporary name
+        const tempImagePath = __dirname + '/upload/' + 'randomname' + '.png';
+        image.mv(tempImagePath);
         // Creating a new food
         const newFood = await models.Food.create({
             categoryId: categoryId,
@@ -29,10 +32,13 @@ async function createFood(req, res) {
             active: true
         });
 
-        newFood["imgURL"] = `/food/img/${newFood.foodId}`;
+
+        // Rename the image file using the newFood.foodId
+        const newImagePath = __dirname + '/upload/' + newFood.foodId + '.png';
+        fs.renameSync(tempImagePath, newImagePath);
+        newFood['imgURL'] = `/food/img/${newFood.foodId}`;
         await newFood.save();
         // Move the uploaded image to our upload folder
-        image.mv(__dirname + '/upload/' + newFood.foodId + ".png");
         return res.status(200).json(newFood);
     } catch (error) {
         console.error(req.method, req.url, error);
@@ -167,9 +173,18 @@ async function getFoodImageById(req, res) {
 async function updateFood(req, res) {
     try {
         const { body, files, params } = req;
+        const image = files.image;
         let user = req.user;
 
         if (user.roleCode != roles.ADMIN) return res.status(403).json({ 'message': 'Unauthorized operation' });
+
+        // image checks
+        if (!image) return res.status(400).json({ 'message': 'You need to upload image' });
+        // If doesn't have image mime type prevent from uploading
+        if (!/^image/.test(image.mimetype)) return res.status(400).json({ 'message': 'The file does not have image mime type or you upload more than one photo' });
+        // Upload the image
+        const imagePath = __dirname + '/upload/' + params.id + '.png';
+        image.mv(imagePath);
 
         const food = await models.Food.findOne({ where: { foodId: params.id } });
         if (!food) {
@@ -177,11 +192,11 @@ async function updateFood(req, res) {
                 message: "Not found food"
             });
         }
-        if (body.quantity) if (body.quantity < 0) return res.status(400).json({ message: 'quantity cannot be negative' });
-        if (body.price) if (body.price < 0) return res.status(400).json({ message: 'price cannot be negative' });
+        if (body.quantity && body.quantity < 0) return res.status(400).json({ message: 'quantity cannot be negative' });
+        if (body.price && body.price < 0) return res.status(400).json({ message: 'price cannot be negative' });
+
+
         await models.Food.update(body, { where: { foodId: params.id } });
-        food.imgURL = `/food/img/${food.foodId}`;
-        if (files) files.image.mv(__dirname + '/upload/' + food.foodId + ".png");
 
         return res.status(200).json({ message: 'Update successfully' });
     } catch (error) {

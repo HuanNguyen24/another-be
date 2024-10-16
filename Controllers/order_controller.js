@@ -10,21 +10,72 @@ async function createOrder(req, res) {
         if (!tableId || !orderList) return res.status(400).json({ 'message': 'Missing tableId or orderList field' });
         if (!checkInteger(tableId)) return res.status(400).json({ 'message': 'tableId must be an integer' });
 
-        const result = await sequelize.query(`SELECT createOrder(:tableId, :orderedBy, :foodList)`, {
+        /**
+         *      foodid   INTEGER,
+                quantity INTEGER,
+                remain   INTEGER,
+                price    REAL
+         */
+        const foodDetail = await sequelize.query('SELECT * from getFoodDetail(:foodList)', {
             replacements: {
-                tableId: tableId,
-                orderedBy: user.userId,
                 foodList: JSON.stringify(orderList)
             },
-            type: sequelize.QueryTypes.SELECT,
+            type: sequelize.QueryTypes.SELECT
         });
 
-        //result is either 0 or orderId
-        if (result == 0) return res.status(500).json({ 'message': 'Cannot create order' });
-        return res.status(200).json(result);
+        //validate input
+        if (foodDetail.length == 0) return res.status(400).json({ 'message': 'Null food' });
+
+        if (foodDetail.find((row) => (row.quantity > row.remain))) return res.status(400).json({ 'message': 'No enough food for ' + row.foodid });
+
+        //create new order and get id of this
+        const t = await sequelize.transaction();
+        const orderId = (await models.Order.create(
+            {
+                tableId: tableId,
+                orderedBy: user.userId,
+                statusCode: 0
+            },
+            {
+                transaction: t
+            }
+        )).orderId;
+
+        await Promise.all([...foodDetail.flatMap((row) => (
+            [
+                models.Food.update(
+                    {
+                        quantity: row.remain - row.quantity
+                    },
+                    {
+                        where: {
+                            foodId: row.foodid
+                        },
+                        transaction: t
+                    }
+                ),
+                models.OrderFood.create(
+                    {
+                        orderId: orderId,
+                        foodId: row.foodid,
+                        quantity: row.quantity,
+                        price: row.price
+                    },
+                    {
+                        transaction: t
+                    }
+                )
+            ]
+        )),
+        models.Table.update({ status: false }, { where: { tableId: tableId }, transaction: t })
+        ]);
+
+        await t.commit();
+        return res.status(200).json({ 'message': orderId });
 
     } catch (error) {
         console.error(req.method, req.url, error);
+        await t.rollback();
         return res.status(500).json({ 'message': 'Server cannot create order' });
     }
 }
@@ -71,7 +122,7 @@ async function getOrderByTableId(req, res) {
 
 async function getAllOrders(req, res) {
     try {
-        const { statusCode, limit = 10, page = 1 } = req.query;
+        const { statusCode = -1, limit = 10, page = 1 } = req.query;
         const offset = (page - 1) * limit;
 
         const orderList = await sequelize.query('SELECT * FROM getOrderPagination(:lm,:os,:sc)', {
@@ -82,21 +133,25 @@ async function getAllOrders(req, res) {
             },
             type: sequelize.QueryTypes.SELECT
         });
-        orderList?.forEach(async (order) => {
-            order.orderFood = await sequelize.query('SELECT * FROM getOrderFood(:id)', {
-                replacements: {
-                    id: order.orderid
-                },
-                type: sequelize.QueryTypes.SELECT
-            });
 
+        const orderFood = await Promise.all(orderList?.map((order) => sequelize.query('SELECT * FROM getOrderFood(:id)', {
+            replacements: {
+                id: order.orderid
+            },
+            type: sequelize.QueryTypes.SELECT
+        })));
+
+        orderList?.forEach(function (order, index) {
+            order.orderFood = orderFood[index];
         });
+
         const total = (await sequelize.query('SELECT COUNT(*) as count FROM "Order" WHERE "statusCode" = :sc OR :sc = -1', {
             replacements: {
                 sc: statusCode,
             },
             type: sequelize.QueryTypes.SELECT
         }))[0].count;
+
         return res.status(200).json({
             orderList: orderList,
             currentPage: parseInt(page),

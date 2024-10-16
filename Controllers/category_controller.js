@@ -2,6 +2,7 @@ import { models } from '#models/index.js';
 
 async function createCategory(req, res) {
     const { name } = req.body;
+    if (!name) return res.status(400).json({ 'message': 'Missing category name' });
     try {
         const newCate = await models.Category.create({
             name: name,
