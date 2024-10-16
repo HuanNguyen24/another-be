@@ -78,6 +78,7 @@ async function getAllFood(req, res) {
     try {
         const foods = await models.Food.findAll({
             include: {
+                where: { active: true },
                 model: models.Category,
                 as: 'category',
             }
@@ -93,7 +94,7 @@ async function getFood(req, res) {
     const { categoryId, minPrice, maxPrice, minQuantity, maxQuantity, page = 1, limit = 10 } = req.query;
 
     try {
-        const where = {};
+        const where = { active: true };
         const offset = (page - 1) * limit;
 
 
