@@ -4,7 +4,7 @@ import { roles, statuses } from '#config/role_config.js';
 
 async function createOrder(req, res) {
     let user = req.user;
-
+    const t = await sequelize.transaction();
     try {
         const { tableId, orderList } = req.body;
         if (!tableId || !orderList) return res.status(400).json({ 'message': 'Missing tableId or orderList field' });
@@ -29,7 +29,6 @@ async function createOrder(req, res) {
         if (foodDetail.find((row) => (row.quantity > row.remain))) return res.status(400).json({ 'message': 'No enough food for ' + row.foodid });
 
         //create new order and get id of this
-        const t = await sequelize.transaction();
         const orderId = (await models.Order.create(
             {
                 tableId: tableId,
