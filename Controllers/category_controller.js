@@ -24,6 +24,8 @@ async function getAllCategory(req, res) {
     }
 }
 
+//delete category : SƠN
+
 export {
     getAllCategory,
     createCategory

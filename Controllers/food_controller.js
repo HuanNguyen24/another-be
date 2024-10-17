@@ -170,7 +170,7 @@ async function getFoodImageById(req, res) {
         return res.status(500).json({ 'message': 'Server cannot get food by id' });
     }
 }
-
+//SƠN
 async function updateFood(req, res) {
     try {
         const { body, files, params } = req;
