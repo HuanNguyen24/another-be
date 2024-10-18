@@ -25,8 +25,19 @@ async function getAllCategory(req, res) {
 }
 
 //delete category : SƠN
+async function deleteCategory(req, res) {
+    try {
+        const { categoryId } = req.body;
+        await models.Category.destroy({ where: { categoryId } });
+        res.status(200).json({});
+    } catch (error) {
+        console.error(req.method, req.url, error);
+        res.status(500).json({ error });
+    }
+}
 
 export {
     getAllCategory,
-    createCategory
+    createCategory,
+    deleteCategory
 };

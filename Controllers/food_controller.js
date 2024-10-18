@@ -174,18 +174,19 @@ async function getFoodImageById(req, res) {
 async function updateFood(req, res) {
     try {
         const { body, files, params } = req;
-        const image = files.image;
+        const image = files?.image;
         let user = req.user;
 
         if (user.roleCode != roles.ADMIN) return res.status(403).json({ 'message': 'Unauthorized operation' });
 
         // image checks
-        if (!image) return res.status(400).json({ 'message': 'You need to upload image' });
-        // If doesn't have image mime type prevent from uploading
-        if (!/^image/.test(image.mimetype)) return res.status(400).json({ 'message': 'The file does not have image mime type or you upload more than one photo' });
-        // Upload the image
-        const imagePath = __dirname + '/upload/' + params.id + '.png';
-        image.mv(imagePath);
+        if (image) {
+            // If doesn't have image mime type prevent from uploading
+            if (!/^image/.test(image.mimetype)) return res.status(400).json({ 'message': 'The file does not have image mime type or you upload more than one photo' });
+            // Upload the image
+            const imagePath = __dirname + '/upload/' + params.id + '.png';
+            image.mv(imagePath);
+        }
 
         const food = await models.Food.findOne({ where: { foodId: params.id } });
         if (!food) {
