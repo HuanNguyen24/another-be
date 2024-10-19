@@ -194,11 +194,9 @@ async function getInformationStaff(req, res) {
             attributes: [
                 'userId',
                 'userName',
-                'userName',
                 'name',
                 'phoneNumber',
                 'email',
-                'createdTime',
                 'createdTime',
                 'roleCode',
                 'active',
@@ -218,7 +216,6 @@ async function getInformationStaff(req, res) {
             }
         });
         const data = {
-            admin: admin.find((u) => u.userId == req.user.userId),
             admin: admin.find((u) => u.userId == req.user.userId),
             user: user,
         };
