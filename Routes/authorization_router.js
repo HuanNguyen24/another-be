@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import {
     addNewUser,
+    getInformationStaff,
     login,
     logout,
-    refreshToken
+    refreshToken,
 } from '#controllers/authorization_controller.js';
 import { decodeJWT } from '#middlewares/authorization_middleware.js';
 
@@ -16,7 +17,7 @@ router.post('/access-token', decodeJWT, refreshToken);
 router.use(decodeJWT);
 
 router.post('/login', login);
-router.get('/user-staffs-admin', async (req, res) => res.send({}));
+router.get('/user-staffs-admin', getInformationStaff);
 router.put('/user', async (req, res) => res.send({}));
 
 export default router;
