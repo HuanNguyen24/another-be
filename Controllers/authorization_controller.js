@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { models } from '#models/index.js';
 import 'dotenv/config';
 import JWTconfig from '#config/jwt_config.js';
+import { roles } from '#root/config/role_config.js';
 
 async function login(req, res) {
     try {
@@ -11,21 +12,37 @@ async function login(req, res) {
         if (!extractedUser) {
             const { userName, pwd } = req.body;
             if (!userName || !pwd) {
-                return res.status(400).json({ 'message': 'No username and/or password' });
+                return res
+                    .status(400)
+                    .json({ message: 'No username and/or password' });
             }
-            extractedUser = await models.User.findOne({ where: { userName: userName } });
+            extractedUser = await models.User.findOne({
+                where: { userName: userName },
+            });
             if (!extractedUser) {
-                return res.status(404).json({ 'message': 'Incorrect username or password' });
+                return res
+                    .status(404)
+                    .json({ message: 'Incorrect username or password' });
             }
             const result = await bcrypt.compare(pwd, extractedUser.pwd);
             if (!result) {
-                return res.status(404).json({ 'message': 'Incorrect username or password' });
+                return res
+                    .status(404)
+                    .json({ message: 'Incorrect username or password' });
             }
-        }
-        else extractedUser = await models.User.findOne({ where: { userName: extractedUser.userName } });
+        } else
+            extractedUser = await models.User.findOne({
+                where: { userName: extractedUser.userName },
+            });
 
-        const accessToken = generateAccessToken({ userId: extractedUser.userId, roleCode: extractedUser.roleCode });
-        const refreshToken = generateRefreshToken({ userId: extractedUser.userId, roleCode: extractedUser.roleCode });
+        const accessToken = generateAccessToken({
+            userId: extractedUser.userId,
+            roleCode: extractedUser.roleCode,
+        });
+        const refreshToken = generateRefreshToken({
+            userId: extractedUser.userId,
+            roleCode: extractedUser.roleCode,
+        });
 
         return res.status(200).json({
             userId: extractedUser.userId,
@@ -36,7 +53,7 @@ async function login(req, res) {
         });
     } catch (error) {
         console.error(req.method, req.url, error);
-        return res.status(500).json({ 'message': 'Server cannot login' });
+        return res.status(500).json({ message: 'Server cannot login' });
     }
 }
 
@@ -44,7 +61,7 @@ async function logout(req, res) {
     try {
         res.clearCookie('accessToken');
         res.clearCookie('refreshToken');
-        return res.status(200).json({ 'message': 'Logged out successfully' });
+        return res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
         console.error(req.method, req.url, error);
         return res.status(500).json(error);
@@ -57,27 +74,30 @@ async function refreshToken(req, res) {
         const refreshToken = req.body.refreshToken;
         if (!refreshToken) {
             return res.status(404).json({
-                'message': 'Not found refresh token in body !'
+                message: 'Not found refresh token in body !',
             });
         }
         const decodes = jwt.verify(refreshToken, JWTconfig.SECRET_REFRESH);
         const newToken = jwt.sign(
             {
-                userId: extractedUser.userId, roleCode: extractedUser.roleCode
+                userId: extractedUser.userId,
+                roleCode: extractedUser.roleCode,
             },
             JWTconfig.SECRET,
             {
                 algorithm: JWTconfig.algorithm,
-                expiresIn: JWTconfig.tokenLife
+                expiresIn: JWTconfig.tokenLife,
             }
         );
 
-        res.cookie('accessToken', newToken, { httpOnly: true, maxAge: JWTconfig.tokenLife });
+        res.cookie('accessToken', newToken, {
+            httpOnly: true,
+            maxAge: JWTconfig.tokenLife,
+        });
         return res.status(200).json({
-            'message': 'successful',
+            message: 'successful',
             accessToken: newToken,
         });
-
     } catch (error) {
         console.error(req.method, req.url, error);
         return res.status(401).json(error);
@@ -98,9 +118,8 @@ async function addNewUser(req, res) {
             userId: newUser.userId,
             userName: newUser.userName,
             name: newUser.name,
-            roleCode: newUser.roleCode
+            roleCode: newUser.roleCode,
         });
-
     } catch (error) {
         console.error(req.method, req.url, error);
         return res.status(500).json(error);
@@ -108,14 +127,18 @@ async function addNewUser(req, res) {
 }
 
 function generateAccessToken(payload) {
-    return jwt.sign(payload, JWTconfig.SECRET, { algorithm: JWTconfig.algorithm, expiresIn: JWTconfig.tokenLife });
+    return jwt.sign(payload, JWTconfig.SECRET, {
+        algorithm: JWTconfig.algorithm,
+        expiresIn: JWTconfig.tokenLife,
+    });
 }
 
 function generateRefreshToken(payload) {
-    return jwt.sign(payload, JWTconfig.SECRET_REFRESH, { algorithm: JWTconfig.algorithm, expiresIn: JWTconfig.refreshTokenLife });
+    return jwt.sign(payload, JWTconfig.SECRET_REFRESH, {
+        algorithm: JWTconfig.algorithm,
+        expiresIn: JWTconfig.refreshTokenLife,
+    });
 }
-
-
 
 async function editUser(req,res)
 {
@@ -152,10 +175,54 @@ async function editUser(req,res)
         return res.status(500).json(error);
     }
 }
+
+async function getInformationStaff(req, res) {
+    try {
+        const userData = await models.User.findAll({
+            attributes: [
+                'userId',
+                'name',
+                'phoneNumber',
+                'email',
+                'roleCode',
+                'active',
+            ],
+        });
+        const admin = [];
+        const user = [];
+        userData.map((item) => {
+            const dataItem = item.dataValues;
+            if (dataItem.active === true) {
+                const data = {
+                    userId: dataItem.userId,
+                    name: dataItem.name,
+                    phoneNumber: dataItem.phoneNumber,
+                    email: dataItem.email,
+                };
+                if (dataItem.roleCode === roles.ADMIN) {
+                    admin.push(data);
+                } else {
+                    user.push(data);
+                }
+            }
+        });
+        const data = {
+            admin: admin,
+            user: user,
+        };
+        res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.log('Error');
+        res.status(401).json({ success: false });
+    }
+}
+
 export {
     addNewUser,
     login,
     logout,
     refreshToken,
     editUser,
+    getInformationStaff,
 };
+
