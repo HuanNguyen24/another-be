@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
     addNewUser,
+    editUser,
     login,
     logout,
     refreshToken
@@ -17,6 +18,6 @@ router.use(decodeJWT);
 
 router.post('/login', login);
 router.get('/user-staffs-admin', async (req, res) => res.send({}));
-router.put('/user', async (req, res) => res.send({}));
+router.put('/user/editUser', editUser);
 
 export default router;

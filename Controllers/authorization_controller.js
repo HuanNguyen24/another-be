@@ -114,9 +114,48 @@ function generateAccessToken(payload) {
 function generateRefreshToken(payload) {
     return jwt.sign(payload, JWTconfig.SECRET_REFRESH, { algorithm: JWTconfig.algorithm, expiresIn: JWTconfig.refreshTokenLife });
 }
+
+
+
+async function editUser(req,res)
+{
+    try{
+        const userId = req.user.userId;
+        const user = await models.User.findOne({ where: { userId } });
+
+        if (!user) {
+        return res.status(404).json({ message: "User not found" });
+        }
+
+        // Define restricted fields that should not be updated
+        const restrictedFields = ['userId', 'userName', 'pwd', 'active', 'roleCode','createdAt'];
+
+        // Create a dynamic update object with non-null attributes
+        const updatedFields = {};
+        Object.keys(req.body).forEach(key => {
+        if (req.body[key] !== null && req.body[key] !== undefined && !restrictedFields.includes(key)) {
+            updatedFields[key] = req.body[key];
+        }
+        });
+
+        // If there are fields to update, proceed
+        if (Object.keys(updatedFields).length > 0) {
+        await models.User.update(updatedFields, { where: { userId } });
+        return res.status(200).json({ message: "User updated successfully" });
+        } else {
+        return res.status(400).json({ message: "No valid fields to update" });
+        }
+        
+    }
+    catch (error) {
+        console.error(req.method, req.url, error);
+        return res.status(500).json(error);
+    }
+}
 export {
     addNewUser,
     login,
     logout,
     refreshToken,
+    editUser,
 };
