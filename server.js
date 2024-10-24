@@ -33,9 +33,8 @@ app.use('/api/orders', orderRouter);
 app.use('/api/tables', tableRouter);
 app.use('/api/categories', cateRouter);
 
-app.listen(process.env.PORT,"0.0.0.0", () => {
-    console.log('Running at %d', process.env.PORT);
-});
+global.__dirname = process.cwd();
 
-// export const __dirname = path.dirname(new URL(import.meta.url).pathname);
-global.__dirname = path.dirname(new URL(import.meta.url).pathname);
+app.listen(process.env.PORT, () => {
+    console.log('Running at %d and _dirname is ', process.env.PORT, __dirname);
+});
