@@ -57,9 +57,22 @@ async function getStatus(req, res) {
 async function getAllStatus(req, res) {
     try {
         const tables = await models.Table.findAll({
+            where: { active: true },
             order: [['tableId', 'ASC']],
         });
-        if (tables) {
+        if (tables.length>0) {
+
+            // Map the tables to extract only the needed properties
+            /*const result = tables.map(table => {
+                return {
+                    tableId: table.tableId, // Extracting tableId
+                    status: table.status,     // Extracting status
+                    numCustomer: table.numCustomer // Extracting numCustomer
+                };
+            });
+            return res.status(200).json(result);*/
+
+
             return res.status(200).json(tables);
         } else {
             return res.status(204).json({
