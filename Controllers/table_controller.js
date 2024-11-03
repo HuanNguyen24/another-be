@@ -2,6 +2,40 @@ import { models } from '#models/index.js';
 import { roles } from '#root/config/role_config.js';
 import { where } from 'sequelize';
 
+async function updateTable(req, res) {
+    try {
+        const extractedUser = req.user;
+
+        //admin check
+        if (extractedUser.roleCode !== roles.ADMIN) {
+            return res.status(405).json({ success: false, message: 'Not allowed!!!' });
+        }
+
+        const { tableId } = req.params;
+        const { status, numCustomer} = req.body;
+        const table = await models.Table.findOne({
+            where: { tableId: tableId },
+        });
+
+        //no table found
+        if (!table) {
+            return res.status(404).json({ success: false, message: 'Table not found' });
+        }
+
+        //update table
+        await table.update({
+            status: status !== undefined ? status : table.status,
+            numCustomer: numCustomer !== undefined ? numCustomer : table.numCustomer,
+        });
+
+        return res.status(200).json({ success: true, table });
+    } catch (error) {
+        console.error(req.method, req.url, error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+}
+
+
 async function getStatus(req, res) {
     try {
         const params = req.params;
@@ -97,7 +131,7 @@ async function removeTable(req, res) {
     }
 }
 
-export { getStatus, getAllStatus, addTable, removeTable };
+export { getStatus, getAllStatus, addTable, removeTable, updateTable };
 
 // if table exist, change active to true
 // const result = await models.Table.findOne({
