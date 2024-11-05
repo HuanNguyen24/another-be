@@ -12,7 +12,7 @@ async function updateTable(req, res) {
         }
 
         const { tableId } = req.params;
-        const { status, numCustomer} = req.body;
+        const { status, numCustomer, active } = req.body;
         const table = await models.Table.findOne({
             where: { tableId: tableId },
         });
@@ -26,6 +26,7 @@ async function updateTable(req, res) {
         await table.update({
             status: status !== undefined ? status : table.status,
             numCustomer: numCustomer !== undefined ? numCustomer : table.numCustomer,
+            active: active !== undefined ? active : table.active
         });
 
         return res.status(200).json({ success: true, table });
@@ -60,7 +61,37 @@ async function getAllStatus(req, res) {
             where: { active: true },
             order: [['tableId', 'ASC']],
         });
-        if (tables.length>0) {
+        if (tables.length > 0) {
+
+            // Map the tables to extract only the needed properties
+            /*const result = tables.map(table => {
+                return {
+                    tableId: table.tableId, // Extracting tableId
+                    status: table.status,     // Extracting status
+                    numCustomer: table.numCustomer // Extracting numCustomer
+                };
+            });
+            return res.status(200).json(result);*/
+
+
+            return res.status(200).json(tables);
+        } else {
+            return res.status(204).json({
+                message: 'Empty list of tables',
+            });
+        }
+    } catch (error) {
+        console.error(req.method, req.url, error);
+        return res.status(500).json(error);
+    }
+}
+
+async function getAllStatusAdmin(req, res) {
+    try {
+        const tables = await models.Table.findAll({
+            order: [['tableId', 'ASC']],
+        });
+        if (tables.length > 0) {
 
             // Map the tables to extract only the needed properties
             /*const result = tables.map(table => {
@@ -144,7 +175,7 @@ async function removeTable(req, res) {
     }
 }
 
-export { getStatus, getAllStatus, addTable, removeTable, updateTable };
+export { getStatus, getAllStatus, addTable, removeTable, updateTable, getAllStatusAdmin };
 
 // if table exist, change active to true
 // const result = await models.Table.findOne({
