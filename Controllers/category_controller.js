@@ -16,7 +16,7 @@ async function createCategory(req, res) {
 
 async function getAllCategory(req, res) {
     try {
-        const cate = await models.Category.findAll();
+        const cate = await models.Category.findAll({ where: { active: true } });
         return res.status(200).json(cate);
     } catch (error) {
         console.error(req.method, req.url, error);
@@ -28,7 +28,7 @@ async function getAllCategory(req, res) {
 async function deleteCategory(req, res) {
     try {
         const { categoryId } = req.body;
-        await models.Category.destroy({ where: { categoryId } });
+        await models.Category.update({ active: false }, { where: { categoryId } });
         res.status(200).json({});
     } catch (error) {
         console.error(req.method, req.url, error);
