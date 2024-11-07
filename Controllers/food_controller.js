@@ -86,7 +86,7 @@ async function getAllFood(req, res) {
         return res.status(200).json(foods);
     } catch (error) {
         console.error(req.method, req.url, error);
-        return res.status(500).json({ message: `Server cannot fetch foods: ${err}` });
+        return res.status(500).json({ message: `Server cannot fetch foods: ${error}` });
     }
 }
 
