@@ -1,6 +1,7 @@
 import { models, sequelize } from '#models/index.js';
 import { checkInteger } from '#services/check_integer.js';
 import { roles, statuses } from '#config/role_config.js';
+import { col, fn, literal, Op } from 'sequelize';
 
 async function createOrder(req, res) {
     let user = req.user;
@@ -227,9 +228,104 @@ function calculateTotal(foodList) {
     return total;
 }
 
+async function calculateRevenueDates(req,res) {
+    const {startDate, endDate}  = req.body;
+    const startTime = new Date(`${startDate}T00:00:00.000Z`)
+    const endTime = new Date(`${endDate}T23:59:59.999Z`)
+    try {
+        const data = await models.OrderFood.findAll({
+            attributes: [
+                [fn('DATE_TRUNC', 'day', col('"order"."payTime"')), 'payTime'], // Group Date
+                [fn('SUM', literal('"OrderFood"."price" * "OrderFood"."quantity"')), 'totalRevenue'], // Calculate total price
+            ],
+            include: [
+                {
+                    model: models.Order, 
+                    as: 'order',
+                    attributes: [],
+                    where: {
+                        payTime: {
+                            [Op.between]: [startTime,endTime]
+                        }
+                    }
+                },
+            ],
+            group: [fn('DATE_TRUNC', 'day',col('"order"."payTime"'))], // Group date
+            order:[
+                [fn('DATE_TRUNC', 'day',col('"order"."payTime"'))]
+            ]
+        });
+
+        const response = processResponseRevenueDates(startDate, endDate, data)
+
+        res.status(200).json(response)
+    } catch(err){
+        console.error(err.message); // Log error
+        res.status(404).json({ error: "Error" });
+    }
+}
+
+function processResponseRevenueDates(startDate, endDate, data){
+    let startPoint = new Date(startDate)
+    let endPoint = new Date(endDate)
+    let response = []
+    let i = 0
+    let flag = false
+
+    while (startPoint <= endPoint){
+        const dateCurr = startPoint.toISOString().split('T')[0]
+        if (i < data.length){   
+            const dataValues = data[i].dataValues
+            const dateCheck = dataValues.payTime.toISOString().split('T')[0]
+            // check if the date is received revenue
+            if ( dateCheck === dateCurr){
+                response.push({date: dateCheck, totalRevenue: dataValues.totalRevenue})
+                i++
+                flag = false
+            } else {
+                flag = true
+            }
+        } else {
+            flag = true
+        }          
+        if(flag === true) {
+            response.push({
+                date: dateCurr,
+                totalRevenue: 0
+            })
+        }
+        startPoint.setDate(startPoint.getDate() + 1)
+    }
+    return response
+}
+
+async function getValuesCategory(req,res) {
+    try{
+        const data = await models.Food.findAll({
+            attributes: [
+                [col('category.name'),'name'],
+                [col('category.categoryId'), "idCategory"],
+                [fn('SUM', col("Food.quantity")), "total"]
+            ],
+            include: {
+                model: models.Category,
+                as: 'category',
+                attributes: []
+            },   
+            group: ['category.name','category.categoryId'] 
+        })
+        res.status(200).json(data)
+    } catch(err){
+        console.error(err.message)
+        res.status(404).json({error: "ERROR"})
+    }
+}
+
 export {
     updateOrder,
     createOrder,
     getOrderByTableId,
     getAllOrders,
+    calculateRevenueDates,
+    getValuesCategory
 };
