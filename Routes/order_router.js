@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { decodeJWT, queryUser } from '#middlewares/authorization_middleware.js';
-import { updateOrder, createOrder, getOrderByTableId, getAllOrders, calculateRevenueDates, getValuesCategory} from '#controllers/order_controller.js';
+import { updateOrder, createOrder, getOrderByTableId, getAllOrders, calculateRevenueDates, getValuesCategory, calculateRevenueByMonth, calculateRevenueByYear} from '#controllers/order_controller.js';
 
 const router = Router();
 
@@ -12,5 +12,7 @@ router.get('/all', getAllOrders);
 
 router.get('/revenueManyDates', calculateRevenueDates)
 router.get('/categoryValues', getValuesCategory)
+router.get('/revenueByMonth',calculateRevenueByMonth)
+router.get('/revenueByYear',calculateRevenueByYear)
 
 export default router;
