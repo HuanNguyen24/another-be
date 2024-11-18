@@ -468,9 +468,14 @@ async function calculateRevenueByYear(req, res) {
 async function storageSummary(req, res) {
     try {
         const currentDate = new Date();
-        const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        const previousMonth = new Date(currentMonth);
-        previousMonth.setMonth(previousMonth.getMonth() - 1);
+
+        // Ngày đầu tháng hiện tại
+        const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const nextMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+
+        // Ngày đầu tháng trước
+        const previousMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        const previousMonthEnd = new Date(currentMonthStart); // Ngày cuối tháng trước
 
         // Doanh thu tháng hiện tại
         const currentMonthRevenue = await models.OrderFood.findOne({
@@ -484,12 +489,12 @@ async function storageSummary(req, res) {
                     attributes: [],
                     where: {
                         payTime: {
-                            [Op.between]: [currentMonth, currentDate]
+                            [Op.between]: [currentMonthStart, nextMonthStart]
                         }
                     }
                 }
             ],
-            raw:true
+            raw: true
         });
 
         // Doanh thu tháng trước
@@ -504,16 +509,16 @@ async function storageSummary(req, res) {
                     attributes: [],
                     where: {
                         payTime: {
-                            [Op.between]: [previousMonth, currentMonth]
+                            [Op.between]: [previousMonthStart, previousMonthEnd]
                         }
                     }
                 }
             ],
-            raw:true
+            raw: true
         });
 
-        const totalCurrentRevenue = parseFloat(currentMonthRevenue?.dataValues?.totalRevenue || 0);
-        const totalPreviousRevenue = parseFloat(previousMonthRevenue?.dataValues?.totalRevenue || 0);
+        const totalCurrentRevenue = parseFloat(currentMonthRevenue?.totalRevenue || 0);
+        const totalPreviousRevenue = parseFloat(previousMonthRevenue?.totalRevenue || 0);
 
         // Tăng trưởng (so với tháng trước)
         const growth =
@@ -541,6 +546,7 @@ async function storageSummary(req, res) {
         res.status(500).json({ message: 'Error fetching storage summary', error });
     }
 }
+
 
 
 export {
