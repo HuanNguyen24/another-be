@@ -2,7 +2,6 @@ import { models, sequelize } from '#models/index.js';
 import { checkInteger } from '#services/check_integer.js';
 import { roles, statuses } from '#config/role_config.js';
 import { col, fn, literal, Op } from 'sequelize';
-import { col, fn, literal, Op } from 'sequelize';
 
 async function createOrder(req, res) {
     let user = req.user;
@@ -312,7 +311,10 @@ async function getValuesCategory(req,res) {
             include: {
                 model: models.Category,
                 as: 'category',
-                attributes: []
+                attributes: [],
+                where: {
+                    active: true
+                }
             },   
             group: ['category.name','category.categoryId'],
             having: sequelize.where(fn('SUM', col("Food.quantity")),'>',0)
