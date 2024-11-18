@@ -228,11 +228,11 @@ function calculateTotal(foodList) {
     return total;
 }
 
-async function calculateRevenueDates(req,res) {
-    const startDate = req.query.startDate
-    const endDate = req.query.endDate
-    const startTime = new Date(`${startDate}T00:00:00.000Z`)
-    const endTime = new Date(`${endDate}T23:59:59.999Z`)
+async function calculateRevenueDates(req, res) {
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const startTime = new Date(`${startDate}T00:00:00.000Z`);
+    const endTime = new Date(`${endDate}T23:59:59.999Z`);
     try {
         const data = await models.OrderFood.findAll({
             attributes: [
@@ -241,70 +241,70 @@ async function calculateRevenueDates(req,res) {
             ],
             include: [
                 {
-                    model: models.Order, 
+                    model: models.Order,
                     as: 'order',
                     attributes: [],
                     where: {
                         payTime: {
-                            [Op.between]: [startTime,endTime]
+                            [Op.between]: [startTime, endTime]
                         }
                     }
                 },
             ],
-            group: [fn('DATE_TRUNC', 'day',col('"order"."payTime"'))], // Group date
-            order:[
-                [fn('DATE_TRUNC', 'day',col('"order"."payTime"'))]
+            group: [fn('DATE_TRUNC', 'day', col('"order"."payTime"'))], // Group date
+            order: [
+                [fn('DATE_TRUNC', 'day', col('"order"."payTime"'))]
             ]
         });
 
-        const response = processResponseRevenueDates(startDate, endDate, data)
+        const response = processResponseRevenueDates(startDate, endDate, data);
 
-        res.status(200).json(response)
-    } catch(err){
+        res.status(200).json(response);
+    } catch (err) {
         console.error(err.message); // Log error
-        res.status(404).json({ error: "Error" });
+        res.status(404).json({ err });
     }
 }
 
-function processResponseRevenueDates(startDate, endDate, data){
-    let startPoint = new Date(startDate)
-    let endPoint = new Date(endDate)
-    let response = []
-    let i = 0
-    let flag = false
+function processResponseRevenueDates(startDate, endDate, data) {
+    let startPoint = new Date(startDate);
+    let endPoint = new Date(endDate);
+    let response = [];
+    let i = 0;
+    let flag = false;
 
-    while (startPoint <= endPoint){
-        const dateCurr = startPoint.toISOString().split('T')[0]
-        if (i < data.length){   
-            const dataValues = data[i].dataValues
-            const dateCheck = dataValues.payTime.toISOString().split('T')[0]
+    while (startPoint <= endPoint) {
+        const dateCurr = startPoint.toISOString().split('T')[0];
+        if (i < data.length) {
+            const dataValues = data[i].dataValues;
+            const dateCheck = dataValues.payTime.toISOString().split('T')[0];
             // check if the date is received revenue
-            if ( dateCheck === dateCurr){
-                response.push({date: dateCheck, totalRevenue: dataValues.totalRevenue})
-                i++
-                flag = false
+            if (dateCheck === dateCurr) {
+                response.push({ date: dateCheck, totalRevenue: dataValues.totalRevenue });
+                i++;
+                flag = false;
             } else {
-                flag = true
+                flag = true;
             }
         } else {
-            flag = true
-        }          
-        if(flag === true) {
+            flag = true;
+        }
+        if (flag === true) {
             response.push({
                 date: dateCurr,
                 totalRevenue: 0
-            })
+            });
         }
-        startPoint.setDate(startPoint.getDate() + 1)
+        startPoint.setDate(startPoint.getDate() + 1);
     }
-    return response
+    return response;
 }
 
-async function getValuesCategory(req,res) {
-    try{
+async function getValuesCategory(req, res) {
+    try {
         const data = await models.Food.findAll({
             attributes: [
-                [col('category.name'),'name'],
+                [col('category.name'), 'name'],
                 [col('category.categoryId'), "idCategory"],
                 [fn('SUM', col("Food.quantity")), "total"]
             ],
@@ -315,14 +315,14 @@ async function getValuesCategory(req,res) {
                 where: {
                     active: true
                 }
-            },   
-            group: ['category.name','category.categoryId'],
-            having: sequelize.where(fn('SUM', col("Food.quantity")),'>',0)
-        })
-        res.status(200).json(data)
-    } catch(err){
-        console.error(err.message)
-        res.status(404).json({error: "ERROR"})
+            },
+            group: ['category.name', 'category.categoryId'],
+            having: sequelize.where(fn('SUM', col("Food.quantity")), '>', 0)
+        });
+        res.status(200).json(data);
+    } catch (err) {
+        console.error(err.message);
+        res.status(404).json({ error: "ERROR" });
     }
 }
 
