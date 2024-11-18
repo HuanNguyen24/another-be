@@ -336,7 +336,7 @@ async function calculateRevenueByMonth(req, res) {
 
         const startDate = new Date(`${startMonth}-01T00:00:00.000Z`);
         const endDate = new Date(`${endMonth}-01T00:00:00.000Z`);
-        endDate.setMonth(endDate.getMonth() + 1); // Include the last month
+        endDate.setMonth(endDate.getMonth() + 1); 
 
         const monthlyData = await models.OrderFood.findAll({
             attributes: [
@@ -360,24 +360,33 @@ async function calculateRevenueByMonth(req, res) {
         });
 
         const response = [];
-        let previousRevenue = null;
+        let previousRevenue = 0;
 
-        monthlyData.forEach((entry, index) => {
-            const currentMonth = entry.dataValues.month.toISOString().split('T')[0].slice(0, 7); // Extract YYYY-MM
-            const totalRevenue = parseFloat(entry.dataValues.totalRevenue || 0);
+        const allMonths = [];
+        let currentMonth = new Date(startDate);
+        while (currentMonth < endDate) {
+            allMonths.push(currentMonth.toISOString().slice(0, 7)); // YYYY-MM
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+        }
+      
+        allMonths.forEach((month) => {
+            const foundData = monthlyData.find(
+                (entry) => entry.dataValues.month.toISOString().slice(0, 7) === month
+            );
+            const totalRevenue = foundData ? parseFloat(foundData.dataValues.totalRevenue || 0) : 0;
 
-            let growth = null;
-            if (previousRevenue !== null) {
-                growth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : null;
-            }
+            const growth =
+                previousRevenue > 0
+                    ? ((totalRevenue - previousRevenue) / previousRevenue) * 100
+                    : 0;
 
             response.push({
-                month: currentMonth,
+                month: month,
                 totalRevenue: totalRevenue,
-                growth: growth !== null ? growth.toFixed(2) + '%' : 'N/A'
+                growth: growth.toFixed(2) + '%',
             });
 
-            previousRevenue = totalRevenue; // Update for the next calculation
+            previousRevenue = totalRevenue; 
         });
 
         return res.status(200).json(response);
@@ -398,7 +407,7 @@ async function calculateRevenueByYear(req, res) {
 
         const startDate = new Date(`${startYear}-01-01T00:00:00.000Z`);
         const endDate = new Date(`${endYear}-01-01T00:00:00.000Z`);
-        endDate.setFullYear(endDate.getFullYear() + 1); // Include the last year
+        endDate.setFullYear(endDate.getFullYear() + 1); 
 
         const yearlyData = await models.OrderFood.findAll({
             attributes: [
@@ -422,24 +431,31 @@ async function calculateRevenueByYear(req, res) {
         });
 
         const response = [];
-        let previousRevenue = null;
+        let previousRevenue = 0;
+    
+        const allYears = [];
+        for (let year = parseInt(startYear); year <= parseInt(endYear); year++) {
+            allYears.push(year.toString());
+        }
 
-        yearlyData.forEach((entry, index) => {
-            const currentYear = entry.dataValues.year.toISOString().split('T')[0].slice(0, 4); // Extract YYYY
-            const totalRevenue = parseFloat(entry.dataValues.totalRevenue || 0);
+        allYears.forEach((year) => {
+            const foundData = yearlyData.find(
+                (entry) => entry.dataValues.year.toISOString().slice(0, 4) === year
+            );
+            const totalRevenue = foundData ? parseFloat(foundData.dataValues.totalRevenue || 0) : 0;
 
-            let growth = null;
-            if (previousRevenue !== null) {
-                growth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : null;
-            }
+            const growth =
+                previousRevenue > 0
+                    ? ((totalRevenue - previousRevenue) / previousRevenue) * 100
+                    : 0;
 
             response.push({
-                year: currentYear,
+                year: year,
                 totalRevenue: totalRevenue,
-                growth: growth !== null ? growth.toFixed(2) + '%' : 'N/A'
+                growth: growth.toFixed(2) + '%',
             });
 
-            previousRevenue = totalRevenue; // Update for the next calculation
+            previousRevenue = totalRevenue; 
         });
 
         return res.status(200).json(response);
@@ -449,6 +465,82 @@ async function calculateRevenueByYear(req, res) {
     }
 }
 
+async function storageSummary(req, res) {
+    try {
+        const currentDate = new Date();
+        const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const previousMonth = new Date(currentMonth);
+        previousMonth.setMonth(previousMonth.getMonth() - 1);
+
+        // Doanh thu tháng hiện tại
+        const currentMonthRevenue = await models.OrderFood.findOne({
+            attributes: [
+                [fn('SUM', literal('"OrderFood"."price" * "OrderFood"."quantity"')), 'totalRevenue']
+            ],
+            include: [
+                {
+                    model: models.Order,
+                    as: 'order',
+                    attributes: [],
+                    where: {
+                        payTime: {
+                            [Op.between]: [currentMonth, currentDate]
+                        }
+                    }
+                }
+            ],
+            raw:true
+        });
+
+        // Doanh thu tháng trước
+        const previousMonthRevenue = await models.OrderFood.findOne({
+            attributes: [
+                [fn('SUM', literal('"OrderFood"."price" * "OrderFood"."quantity"')), 'totalRevenue']
+            ],
+            include: [
+                {
+                    model: models.Order,
+                    as: 'order',
+                    attributes: [],
+                    where: {
+                        payTime: {
+                            [Op.between]: [previousMonth, currentMonth]
+                        }
+                    }
+                }
+            ],
+            raw:true
+        });
+
+        const totalCurrentRevenue = parseFloat(currentMonthRevenue?.dataValues?.totalRevenue || 0);
+        const totalPreviousRevenue = parseFloat(previousMonthRevenue?.dataValues?.totalRevenue || 0);
+
+        // Tăng trưởng (so với tháng trước)
+        const growth =
+            totalPreviousRevenue > 0
+                ? ((totalCurrentRevenue - totalPreviousRevenue) / totalPreviousRevenue) * 100
+                : 0;
+
+        // Danh mục hiện có
+        const categoryCount = await models.Category.count({
+            where: { active: true }
+        });
+
+        // Tổng số sản phẩm hiện có
+        const productCount = await models.Food.sum('quantity');
+
+        // Trả về dữ liệu
+        return res.status(200).json({
+            currentMonthRevenue: totalCurrentRevenue,
+            categoryCount: categoryCount,
+            productCount: productCount,
+            growth: growth.toFixed(2) + '%'
+        });
+    } catch (error) {
+        console.error(req.method, req.url, error);
+        res.status(500).json({ message: 'Error fetching storage summary', error });
+    }
+}
 
 
 export {
@@ -459,5 +551,6 @@ export {
     calculateRevenueDates,
     getValuesCategory,
     calculateRevenueByMonth,
-    calculateRevenueByYear
+    calculateRevenueByYear,
+    storageSummary,
 };
