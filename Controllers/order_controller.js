@@ -311,7 +311,10 @@ async function getValuesCategory(req,res) {
             include: {
                 model: models.Category,
                 as: 'category',
-                attributes: []
+                attributes: [],
+                where: {
+                    active: true
+                }
             },   
             group: ['category.name','category.categoryId'],
             having: sequelize.where(fn('SUM', col("Food.quantity")),'>',0)
