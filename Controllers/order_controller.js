@@ -229,7 +229,8 @@ function calculateTotal(foodList) {
 }
 
 async function calculateRevenueDates(req,res) {
-    const {startDate, endDate}  = req.body;
+    const startDate = req.query.startDate
+    const endDate = req.query.endDate
     const startTime = new Date(`${startDate}T00:00:00.000Z`)
     const endTime = new Date(`${endDate}T23:59:59.999Z`)
     try {
@@ -312,7 +313,8 @@ async function getValuesCategory(req,res) {
                 as: 'category',
                 attributes: []
             },   
-            group: ['category.name','category.categoryId'] 
+            group: ['category.name','category.categoryId'],
+            having: sequelize.where(fn('SUM', col("Food.quantity")),'>',0)
         })
         res.status(200).json(data)
     } catch(err){
