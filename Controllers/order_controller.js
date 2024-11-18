@@ -326,11 +326,138 @@ async function getValuesCategory(req, res) {
     }
 }
 
+async function calculateRevenueByMonth(req, res) {
+    try {
+        const { startMonth, endMonth } = req.query;
+
+        if (!startMonth || !endMonth) {
+            return res.status(400).json({ message: 'Missing startMonth or endMonth parameter' });
+        }
+
+        const startDate = new Date(`${startMonth}-01T00:00:00.000Z`);
+        const endDate = new Date(`${endMonth}-01T00:00:00.000Z`);
+        endDate.setMonth(endDate.getMonth() + 1); // Include the last month
+
+        const monthlyData = await models.OrderFood.findAll({
+            attributes: [
+                [fn('DATE_TRUNC', 'month', col('"order"."payTime"')), 'month'],
+                [fn('SUM', literal('"OrderFood"."price" * "OrderFood"."quantity"')), 'totalRevenue']
+            ],
+            include: [
+                {
+                    model: models.Order,
+                    as: 'order',
+                    attributes: [],
+                    where: {
+                        payTime: {
+                            [Op.between]: [startDate, endDate]
+                        }
+                    }
+                }
+            ],
+            group: [fn('DATE_TRUNC', 'month', col('"order"."payTime"'))],
+            order: [[fn('DATE_TRUNC', 'month', col('"order"."payTime"'))]]
+        });
+
+        const response = [];
+        let previousRevenue = null;
+
+        monthlyData.forEach((entry, index) => {
+            const currentMonth = entry.dataValues.month.toISOString().split('T')[0].slice(0, 7); // Extract YYYY-MM
+            const totalRevenue = parseFloat(entry.dataValues.totalRevenue || 0);
+
+            let growth = null;
+            if (previousRevenue !== null) {
+                growth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : null;
+            }
+
+            response.push({
+                month: currentMonth,
+                totalRevenue: totalRevenue,
+                growth: growth !== null ? growth.toFixed(2) + '%' : 'N/A'
+            });
+
+            previousRevenue = totalRevenue; // Update for the next calculation
+        });
+
+        return res.status(200).json(response);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Error calculating monthly revenue', error: err });
+    }
+}
+
+
+async function calculateRevenueByYear(req, res) {
+    try {
+        const { startYear, endYear } = req.query;
+
+        if (!startYear || !endYear) {
+            return res.status(400).json({ message: 'Missing startYear or endYear parameter' });
+        }
+
+        const startDate = new Date(`${startYear}-01-01T00:00:00.000Z`);
+        const endDate = new Date(`${endYear}-01-01T00:00:00.000Z`);
+        endDate.setFullYear(endDate.getFullYear() + 1); // Include the last year
+
+        const yearlyData = await models.OrderFood.findAll({
+            attributes: [
+                [fn('DATE_TRUNC', 'year', col('"order"."payTime"')), 'year'],
+                [fn('SUM', literal('"OrderFood"."price" * "OrderFood"."quantity"')), 'totalRevenue']
+            ],
+            include: [
+                {
+                    model: models.Order,
+                    as: 'order',
+                    attributes: [],
+                    where: {
+                        payTime: {
+                            [Op.between]: [startDate, endDate]
+                        }
+                    }
+                }
+            ],
+            group: [fn('DATE_TRUNC', 'year', col('"order"."payTime"'))],
+            order: [[fn('DATE_TRUNC', 'year', col('"order"."payTime"'))]]
+        });
+
+        const response = [];
+        let previousRevenue = null;
+
+        yearlyData.forEach((entry, index) => {
+            const currentYear = entry.dataValues.year.toISOString().split('T')[0].slice(0, 4); // Extract YYYY
+            const totalRevenue = parseFloat(entry.dataValues.totalRevenue || 0);
+
+            let growth = null;
+            if (previousRevenue !== null) {
+                growth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : null;
+            }
+
+            response.push({
+                year: currentYear,
+                totalRevenue: totalRevenue,
+                growth: growth !== null ? growth.toFixed(2) + '%' : 'N/A'
+            });
+
+            previousRevenue = totalRevenue; // Update for the next calculation
+        });
+
+        return res.status(200).json(response);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Error calculating yearly revenue', error: err });
+    }
+}
+
+
+
 export {
     updateOrder,
     createOrder,
     getOrderByTableId,
     getAllOrders,
     calculateRevenueDates,
-    getValuesCategory
+    getValuesCategory,
+    calculateRevenueByMonth,
+    calculateRevenueByYear
 };
