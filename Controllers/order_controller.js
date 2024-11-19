@@ -532,7 +532,10 @@ async function storageSummary(req, res) {
         });
 
         // Tổng số sản phẩm hiện có
-        const productCount = await models.Food.sum('quantity');
+        const productCount = await models.Food.sum('quantity', {
+            where: { active: true }
+        });
+
 
         // Trả về dữ liệu
         return res.status(200).json({
