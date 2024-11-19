@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { decodeJWT, queryUser } from '#middlewares/authorization_middleware.js';
-import { updateOrder, createOrder, getOrderByTableId, getAllOrders, calculateRevenueDates, getValuesCategory, calculateRevenueByMonth, calculateRevenueByYear, storageSummary} from '#controllers/order_controller.js';
+
+import { updateOrder, createOrder, getOrderByTableId, getAllOrders, calculateRevenueDates, getValuesCategory, calculateRevenueByMonth, calculateRevenueByYear, storageSummary } from '#controllers/order_controller.js';
+
 
 const router = Router();
 
@@ -12,7 +14,11 @@ router.get('/all', getAllOrders);
 
 router.get('/revenue/revenueManyDates', calculateRevenueDates);
 router.get('/revenue/categoryValues', getValuesCategory);
-router.get('/revenueByMonth',calculateRevenueByMonth);
-router.get('/revenueByYear',calculateRevenueByYear);
-router.get('/storageSummary', storageSummary);
+
+
+router.get('/revenue/revenueByMonth', calculateRevenueByMonth);
+router.get('/revenue/revenueByYear', calculateRevenueByYear);
+
+router.get('/revenue/storageSummary', storageSummary);
+
 export default router;
